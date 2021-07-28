@@ -44,6 +44,10 @@ Provide a Writeup / README that includes all the rubric points and how you addre
 
 Implement the method "matchBoundingBoxes", which takes as input both the previous and the current data frames and provides as output the ids of the matched regions of interest (i.e. the boxID property). Matches must be the ones with the highest number of keypoint correspondences.
 
+I completed this by filling out `matchBoundingBoxes(...)`. In this method I looped through the list of matches and checked if they were in both frames. If they were I stored the value of that match in a matrix and incremented the match value.
+
+Finally, I counted the occurances in that matrix and selected the one with more keypoints tallied.
+
 ### FP.2 Compute Lidar-based TTC
 
 Compute the time-to-collision in second for all matched 3D objects using only Lidar measurements from the matched bounding boxes between current and previous frame.
