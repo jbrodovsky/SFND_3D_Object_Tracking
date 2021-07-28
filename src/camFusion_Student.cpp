@@ -159,5 +159,43 @@ void computeTTCLidar(std::vector<LidarPoint> &lidarPointsPrev,
 
 void matchBoundingBoxes(std::vector<cv::DMatch> &matches, std::map<int, int> &bbBestMatches, DataFrame &prevFrame, DataFrame &currFrame)
 {
-    // ...
+    // Initialize our matches matrix
+    cv::Mat matcher = cv::Mat::zeros(prevFrame.boundingBoxes.size(), currFrame.boundingBoxes.size(), CV_32S);
+    // Loop through all keypoint matches
+    for(auto itr = matches.begin(); itr!=matches.end(); itr++)
+    {   
+        // Check the bounding boxes
+        cv::KeyPoint current = currFrame.keypoints[itr->trainIdx];
+        cv::KeyPoint previous = prevFrame.keypoints[itr->queryIdx];
+        for(int i=0; i<prevFrame.boundingBoxes.size(); i++)
+        {
+            for(int j=0; j<currFrame.boundingBoxes.size(); j++)
+            {
+                if(currFrame.boundingBoxes[j].roi.contains(current.pt) && prevFrame.boundingBoxes[i].roi.contains(current.pt))
+                {
+                    matcher.at<int>(i,j)++; // Increment the number of keypoints in the region identified by the bounding box
+                }
+            }
+        }
+    }
+    // Count occurences in the matches atrix and select the one with more keypoints
+    int best_value, id;
+    // Loop through the rows
+    for(size_t row=0; row<matcher.rows; row++)
+    {
+        best_value = 0;
+        id = -1;
+        // Loop through the cols
+        for(size_t col=0; col<matcher.cols; col++)
+        {
+            // Check to see if the current entry is a better match than the currently identified one
+            if(matcher.at<int>(row, col) > best_value && matcher.at<int>(row, col)>0)
+            {
+                best_value = matcher.at<int>(row, col);
+                id = col;
+            }
+        }
+        if (id != -1) { bbBestMatches.emplace(row, id); }
+    }
+    
 }
