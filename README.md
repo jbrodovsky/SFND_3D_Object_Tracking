@@ -52,6 +52,8 @@ Finally, I counted the occurances in that matrix and selected the one with more 
 
 Compute the time-to-collision in second for all matched 3D objects using only Lidar measurements from the matched bounding boxes between current and previous frame.
 
+This was completed in the `computeTTCLidar(...)` method. In this method I average the x values of the previous and current frame ensuring that they were within the lane by checking the y values of each point. I then used the difference in the x values divided by  1 / frameRate to find the current speed. I then calculated TTC by divided the current frame's x value by the calculated speed.
+
 ### FP.3 Associate Keypoint Correspondences with Bounding Boxes
 
 Prepare the TTC computation based on camera measurements by associating keypoint correspondences to the bounding boxes which enclose them. All matches which satisfy this condition must be added to a vector in the respective bounding box.

@@ -153,7 +153,24 @@ void computeTTCCamera(std::vector<cv::KeyPoint> &kptsPrev, std::vector<cv::KeyPo
 void computeTTCLidar(std::vector<LidarPoint> &lidarPointsPrev,
                      std::vector<LidarPoint> &lidarPointsCurr, double frameRate, double &TTC)
 {
-    // ...
+    double dt = 1/frameRate;
+    double prev_x = 0;
+    double curr_x = 0;
+    // Average the x values for the previous frame
+    for(auto itr = lidarPointsPrev.begin(); itr!=lidarPointsPrev.end(); ++itr)
+    {
+        if(fabs(itr->y) <= 2.0) // Lane width assumed to be ~4m
+        { prev_x += (*itr).x; }
+    }
+    prev_x /= lidarPointsPrev.size();
+    // Average the x values for the current frame
+    for(auto itr = lidarPointsCurr.begin(); itr!=lidarPointsCurr.end(); ++itr)
+    {
+        if(fabs(itr->y) <= 2) { curr_x += (*itr).x; }
+    }
+    curr_x /= lidarPointsCurr.size();
+    // Calculate x-axis speed and divide curr_x by it to get TTC
+    TTC = curr_x / ((prev_x - curr_x) / dt);
 }
 
 
@@ -162,7 +179,7 @@ void matchBoundingBoxes(std::vector<cv::DMatch> &matches, std::map<int, int> &bb
     // Initialize our matches matrix
     cv::Mat matcher = cv::Mat::zeros(prevFrame.boundingBoxes.size(), currFrame.boundingBoxes.size(), CV_32S);
     // Loop through all keypoint matches
-    for(auto itr = matches.begin(); itr!=matches.end(); itr++)
+    for(auto itr = matches.begin(); itr!=matches.end(); ++itr)
     {   
         // Check the bounding boxes
         cv::KeyPoint current = currFrame.keypoints[itr->trainIdx];
@@ -178,7 +195,7 @@ void matchBoundingBoxes(std::vector<cv::DMatch> &matches, std::map<int, int> &bb
             }
         }
     }
-    // Count occurences in the matches atrix and select the one with more keypoints
+    // Count occurences in the matches matrix and select the one with more keypoints
     int best_value, id;
     // Loop through the rows
     for(size_t row=0; row<matcher.rows; row++)
