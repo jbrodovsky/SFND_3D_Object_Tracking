@@ -17,7 +17,7 @@ void clusterLidarWithROI(std::vector<BoundingBox> &boundingBoxes, std::vector<Li
     // loop over all Lidar points and associate them to a 2D bounding box
     cv::Mat X(4, 1, cv::DataType<double>::type);
     cv::Mat Y(3, 1, cv::DataType<double>::type);
-
+    //cout<<"\tclustering...";
     for (auto it1 = lidarPoints.begin(); it1 != lidarPoints.end(); ++it1)
     {
         // assemble vector for matrix-vector-multiplication
@@ -59,6 +59,7 @@ void clusterLidarWithROI(std::vector<BoundingBox> &boundingBoxes, std::vector<Li
         }
 
     } // eof loop over all Lidar points
+    //cout<<"Done!\n";
 }
 
 /* 
@@ -138,19 +139,6 @@ void show3DObjects(std::vector<BoundingBox> &boundingBoxes, cv::Size worldSize, 
 // associate a given bounding box with the keypoints it contains
 void clusterKptMatchesWithROI(BoundingBox &boundingBox, std::vector<cv::KeyPoint> &kptsPrev, std::vector<cv::KeyPoint> &kptsCurr, std::vector<cv::DMatch> &kptMatches)
 {
-    /* // Outlier removal
-    double dist = 0.0;
-    int matches = 0;
-    for(cv::DMatch &match : kptMatches)
-    {
-        if (boundingBox.roi.contains(kptsCurr[match.trainIdx].pt))
-        {   // Check to see if the keypoint is in the ROI
-            dist += match.distance;
-            matches++;
-        }
-    }
-    dist /= matches;
-    */
     for(cv::DMatch match : kptMatches)
     { 
         if(boundingBox.roi.contains(kptsCurr[match.trainIdx].pt))
@@ -165,58 +153,54 @@ void clusterKptMatchesWithROI(BoundingBox &boundingBox, std::vector<cv::KeyPoint
 void computeTTCCamera(std::vector<cv::KeyPoint> &kptsPrev, std::vector<cv::KeyPoint> &kptsCurr, 
                       std::vector<cv::DMatch> kptMatches, double frameRate, double &TTC, cv::Mat *visImg)
 {
-    vector<double> distance_ratios;
-    for(auto outer = kptMatches.begin(); outer!=kptMatches.end() - 1; ++outer)
-    {
-        // Keypoint outer loop
-        cv::KeyPoint outer_current = kptsCurr.at(outer->trainIdx);
-        cv::KeyPoint outer_previous = kptsCurr.at(outer->queryIdx);
-        for(auto inner = kptMatches.begin()+1; inner != kptMatches.end(); ++inner)
-        {
-            // Keypoint inner loop
-            double min_distance = 100.0;
-            cv::KeyPoint inner_current = kptsCurr.at(inner->trainIdx);
-            cv::KeyPoint inner_previous = kptsPrev.at(inner->queryIdx);
-            double current_distance = cv::norm(outer_current.pt - inner_current.pt);
-            double previous_distance = cv::norm(inner_current.pt - inner_previous.pt);
-            double distance_ratio = 0;
-            try
-            {
-                distance_ratio = current_distance / previous_distance;
-            }
-            catch(const std::exception& e)
-            {
-                std::cerr << e.what() << '\n';
-            }
-            distance_ratios.push_back(distance_ratio);           
-        }
-    }
+    // compute distance ratios between all matched keypoints
+    vector<double> distRatios; // stores the distance ratios for all keypoints between curr. and prev. frame
+    for (auto it1 = kptMatches.begin(); it1 != kptMatches.end() - 1; ++it1)
+    { // outer kpt. loop
 
-    if(distance_ratios.size() == 0)
+        // get current keypoint and its matched partner in the prev. frame
+        cv::KeyPoint kpOuterCurr = kptsCurr.at(it1->trainIdx);
+        cv::KeyPoint kpOuterPrev = kptsPrev.at(it1->queryIdx);
+
+        for (auto it2 = kptMatches.begin() + 1; it2 != kptMatches.end(); ++it2)
+        { // inner kpt.-loop
+
+            double minDist = 100.0; // min. required distance
+
+            // get next keypoint and its matched partner in the prev. frame
+            cv::KeyPoint kpInnerCurr = kptsCurr.at(it2->trainIdx);
+            cv::KeyPoint kpInnerPrev = kptsPrev.at(it2->queryIdx);
+
+            // compute distances and distance ratios
+            double distCurr = cv::norm(kpOuterCurr.pt - kpInnerCurr.pt);
+            double distPrev = cv::norm(kpOuterPrev.pt - kpInnerPrev.pt);
+
+            if (distPrev > std::numeric_limits<double>::epsilon() && distCurr >= minDist)
+            { // avoid division by zero
+
+                double distRatio = distCurr / distPrev;
+                distRatios.push_back(distRatio);
+            }
+        } // eof inner loop over all matched kpts
+    }     // eof outer loop over all matched kpts
+
+    // only continue if list of distance ratios is not empty
+    if (distRatios.size() == 0)
     {
         TTC = NAN;
         return;
     }
 
-    auto mean_distance_ratio = std::accumulate(distance_ratios.begin(), distance_ratios.end(), 0.0) / distance_ratios.size();
-    std::sort(distance_ratios.begin(), distance_ratios.end());
-    double median_ratio = 0.0;
-    int mid = distance_ratios.size() / 2;
-    if (distance_ratios.size() % 2 == 0)
-    {
-        // is even
-        median_ratio = (distance_ratios.at(mid) + distance_ratios.at(mid - 1))/2;
-    }
-    else
-    {
-        // is odd
-        median_ratio = distance_ratios.at(mid);
-    }
+    // STUDENT TASK (replacement for meanDistRatio)
+    std::sort(distRatios.begin(), distRatios.end());
+    long medIndex = floor(distRatios.size() / 2.0);
+    double medDistRatio = distRatios.size() % 2 == 0 ? (distRatios[medIndex - 1] + distRatios[medIndex]) / 2.0 : distRatios[medIndex]; // compute median dist. ratio to remove outlier influence
 
-    TTC = -1 / ((1 - median_ratio) *frameRate);
-    std::cout << "TTC Camera: "<< TTC;
+    double dT = 1 / frameRate;
+    TTC = -dT / (1 - medDistRatio);
+    // EOF STUDENT TASK
+    cout << "\tCamera\tDistance ratio: " << medDistRatio << "\n\t\tTTC: " << TTC << "\n";
 }
-
 
 void computeTTCLidar(std::vector<LidarPoint> &lidarPointsPrev,
                      std::vector<LidarPoint> &lidarPointsCurr, double frameRate, double &TTC)
@@ -239,6 +223,8 @@ void computeTTCLidar(std::vector<LidarPoint> &lidarPointsPrev,
     curr_x /= lidarPointsCurr.size();
     // Calculate x-axis speed and divide curr_x by it to get TTC
     TTC = curr_x / ((prev_x - curr_x) / dt);
+    //cout <<"\tLidar:\t\tTTC:"<<TTC<<" seconds\n\t\t\tDistance: "<<curr_x;
+    cout << "\tLidar\tDistance: " << curr_x << "\n\t\tTTC: " << TTC << "\n";
 }
 
 

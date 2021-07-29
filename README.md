@@ -61,18 +61,22 @@ This was completed in the `computeTTCLidar(...)` method. In this method I averag
 
 Prepare the TTC computation based on camera measurements by associating keypoint correspondences to the bounding boxes which enclose them. All matches which satisfy this condition must be added to a vector in the respective bounding box.
 
-clusterKptMatchesWithROI
+This was implemented in the `clusterKptMatchesWithROI` method. This method checks to see if the bounding box contains the keypoint. If so, it is pushed into the bounding box's list of keypoint matches.
 
 ### FP.4 Compute Camera-based TTC
 
 Compute the time-to-collision in second for all matched 3D objects using only keypoint correspondences from the matched bounding boxes between current and previous frame.
 
-computeTTCCamera
+This was implemented in the `computeTTCCamera` method. This method follows the example exercise from Lesson 3: Engineering a Collision Detection System, [Concept 3: Estimating TTC with a Camera](https://classroom.udacity.com/nanodegrees/nd313/parts/1971021c-523b-414c-93a3-2c6297cf4771/modules/3eb3ecc3-b73d-43bb-b565-dcdd5d7a2635/lessons/dfe71db5-4233-4e4f-b33f-40cb9899dc13/concepts/daceaff3-1519-4f4c-82ff-16e02b5c2e8f).
 
 ### FP.5 Performance Evaluation 1
 
 Find examples where the TTC estimate of the Lidar sensor does not seem plausible. Describe your observations and provide a sound argumentation why you think this happened.
 
+Generally, it seems like the Lidar provided a very good estimate of the time-to-collision. Ostensibly, this is because lidar can provide a very precise distance measurement. If you can filter the point cloud data to only concentrate on a specific target, this can be really effecty for getting the distance to the next car. Framerate tends to be fairly consistent, so it becomes realtively straight forward to estimate relative velocity and the time to collision.
+
 ### FP.6 Performance Evaluation 2
 
 Run several detector / descriptor combinations and look at the differences in TTC estimation. Find out which methods perform best and also include several examples where camera-based TTC estimation is way off. As with Lidar, describe your observations again and also look into potential reasons.
+
+Generally, the camera based method is not very good. Often, it yields negative times to collision which isn't useful. When this method does yield sensible and accurate results is when the distance ratio is greater than one.
