@@ -214,7 +214,7 @@ void computeTTCCamera(std::vector<cv::KeyPoint> &kptsPrev, std::vector<cv::KeyPo
     }
 
     TTC = -1 / ((1 - median_ratio) *frameRate);
-    std::cout << "TTC Camera: "<<
+    std::cout << "TTC Camera: "<< TTC;
 }
 
 
