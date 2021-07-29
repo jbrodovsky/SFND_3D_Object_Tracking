@@ -19,6 +19,9 @@ In this final project, you will implement the missing parts in the schematic. To
   * Windows: [Click here for installation instructions](http://gnuwin32.sourceforge.net/packages/make.htm)
 * Git LFS
   * Weight files are handled using [LFS](https://git-lfs.github.com/)
+  * For Linux:
+    * Install using `sudo apt install git-lfs`
+    * Once the repo directory has been cloned, run `git lfs pull` to pull large files in.
 * OpenCV >= 4.1
   * This must be compiled from source using the `-D OPENCV_ENABLE_NONFREE=ON` cmake flag for testing the SIFT and SURF detectors.
   * The OpenCV 4.1.0 source code can be found [here](https://github.com/opencv/opencv/tree/4.1.0)
@@ -58,9 +61,13 @@ This was completed in the `computeTTCLidar(...)` method. In this method I averag
 
 Prepare the TTC computation based on camera measurements by associating keypoint correspondences to the bounding boxes which enclose them. All matches which satisfy this condition must be added to a vector in the respective bounding box.
 
+clusterKptMatchesWithROI
+
 ### FP.4 Compute Camera-based TTC
 
 Compute the time-to-collision in second for all matched 3D objects using only keypoint correspondences from the matched bounding boxes between current and previous frame.
+
+computeTTCCamera
 
 ### FP.5 Performance Evaluation 1
 

@@ -138,7 +138,26 @@ void show3DObjects(std::vector<BoundingBox> &boundingBoxes, cv::Size worldSize, 
 // associate a given bounding box with the keypoints it contains
 void clusterKptMatchesWithROI(BoundingBox &boundingBox, std::vector<cv::KeyPoint> &kptsPrev, std::vector<cv::KeyPoint> &kptsCurr, std::vector<cv::DMatch> &kptMatches)
 {
-    // ...
+    /* // Outlier removal
+    double dist = 0.0;
+    int matches = 0;
+    for(cv::DMatch &match : kptMatches)
+    {
+        if (boundingBox.roi.contains(kptsCurr[match.trainIdx].pt))
+        {   // Check to see if the keypoint is in the ROI
+            dist += match.distance;
+            matches++;
+        }
+    }
+    dist /= matches;
+    */
+    for(cv::DMatch match : kptMatches)
+    { 
+        if(boundingBox.roi.contains(kptsCurr[match.trainIdx].pt))
+        {
+            boundingBox.kptMatches.push_back(match);
+        }
+    }
 }
 
 
@@ -146,7 +165,56 @@ void clusterKptMatchesWithROI(BoundingBox &boundingBox, std::vector<cv::KeyPoint
 void computeTTCCamera(std::vector<cv::KeyPoint> &kptsPrev, std::vector<cv::KeyPoint> &kptsCurr, 
                       std::vector<cv::DMatch> kptMatches, double frameRate, double &TTC, cv::Mat *visImg)
 {
-    // ...
+    vector<double> distance_ratios;
+    for(auto outer = kptMatches.begin(); outer!=kptMatches.end() - 1; ++outer)
+    {
+        // Keypoint outer loop
+        cv::KeyPoint outer_current = kptsCurr.at(outer->trainIdx);
+        cv::KeyPoint outer_previous = kptsCurr.at(outer->queryIdx);
+        for(auto inner = kptMatches.begin()+1; inner != kptMatches.end(); ++inner)
+        {
+            // Keypoint inner loop
+            double min_distance = 100.0;
+            cv::KeyPoint inner_current = kptsCurr.at(inner->trainIdx);
+            cv::KeyPoint inner_previous = kptsPrev.at(inner->queryIdx);
+            double current_distance = cv::norm(outer_current.pt - inner_current.pt);
+            double previous_distance = cv::norm(inner_current.pt - inner_previous.pt);
+            double distance_ratio = 0;
+            try
+            {
+                distance_ratio = current_distance / previous_distance;
+            }
+            catch(const std::exception& e)
+            {
+                std::cerr << e.what() << '\n';
+            }
+            distance_ratios.push_back(distance_ratio);           
+        }
+    }
+
+    if(distance_ratios.size() == 0)
+    {
+        TTC = NAN;
+        return;
+    }
+
+    auto mean_distance_ratio = std::accumulate(distance_ratios.begin(), distance_ratios.end(), 0.0) / distance_ratios.size();
+    std::sort(distance_ratios.begin(), distance_ratios.end());
+    double median_ratio = 0.0;
+    int mid = distance_ratios.size() / 2;
+    if (distance_ratios.size() % 2 == 0)
+    {
+        // is even
+        median_ratio = (distance_ratios.at(mid) + distance_ratios.at(mid - 1))/2;
+    }
+    else
+    {
+        // is odd
+        median_ratio = distance_ratios.at(mid);
+    }
+
+    TTC = -1 / ((1 - median_ratio) *frameRate);
+    std::cout << "TTC Camera: "<<
 }
 
 
